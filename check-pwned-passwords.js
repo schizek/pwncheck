@@ -84,44 +84,62 @@ async function checkPassword(password) {
 /**
  * Parse input file (CSV or text)
  * @param {string} filePath - Path to the input file
- * @returns {string[]} - Array of passwords
+ * @returns {Object[]} - Array of objects with password and originalLineNumber
  */
 function parseInputFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+  const lines = content.split('\n');
+  const result = [];
 
   // Detect CSV format by file extension
   const isCSV = filePath.toLowerCase().endsWith('.csv');
   
-  if (isCSV) {
-    // Parse CSV properly handling quoted fields with commas
-    return lines.map(line => {
-      // If line starts with a quote, find the closing quote
-      if (line.startsWith('"')) {
+  lines.forEach((line, index) => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return; // Skip blank lines
+    
+    let password;
+    if (isCSV) {
+      // Parse CSV properly handling quoted fields with commas
+      if (trimmedLine.startsWith('"')) {
         let endQuoteIndex = 1;
-        while (endQuoteIndex < line.length) {
-          endQuoteIndex = line.indexOf('"', endQuoteIndex);
+        while (endQuoteIndex < trimmedLine.length) {
+          endQuoteIndex = trimmedLine.indexOf('"', endQuoteIndex);
           if (endQuoteIndex === -1) {
             // No closing quote found, return whole line
-            return line.substring(1);
+            password = trimmedLine.substring(1);
+            break;
           }
           // Check if it's an escaped quote ("")
-          if (line[endQuoteIndex + 1] === '"') {
+          if (trimmedLine[endQuoteIndex + 1] === '"') {
             endQuoteIndex += 2; // Skip the escaped quote
             continue;
           }
           // Found the closing quote
-          return line.substring(1, endQuoteIndex).replace(/""/g, '"');
+          password = trimmedLine.substring(1, endQuoteIndex).replace(/""/g, '"');
+          break;
         }
-        return line.substring(1);
+        if (!password) {
+          password = trimmedLine.substring(1);
+        }
+      } else {
+        // Not quoted, just take first field up to comma
+        password = trimmedLine.split(',')[0];
       }
-      // Not quoted, just take first field up to comma
-      return line.split(',')[0];
-    }).filter(p => p);
-  }
-
-  // Plain text file, one password per line
-  return lines;
+    } else {
+      // Plain text file, one password per line
+      password = trimmedLine;
+    }
+    
+    if (password) {
+      result.push({
+        password: password,
+        originalLineNumber: index + 1
+      });
+    }
+  });
+  
+  return result;
 }
 
 /**
@@ -158,15 +176,16 @@ async function main() {
   }
 
   console.log('Parsing passwords...');
-  const passwords = parseInputFile(filePath);
-  console.log(`Found ${passwords.length} password(s) to check\n`);
+  const passwordEntries = parseInputFile(filePath);
+  console.log(`Found ${passwordEntries.length} password(s) to check\n`);
 
   const results = [];
   let checkedCount = 0;
   let cachedCount = 0;
 
-  for (let i = 0; i < passwords.length; i++) {
-    const password = passwords[i];
+  for (let i = 0; i < passwordEntries.length; i++) {
+    const entry = passwordEntries[i];
+    const password = entry.password;
     const hash = sha1(password);
     const prefix = hash.substring(0, HASH_PREFIX_LENGTH);
 
@@ -190,17 +209,19 @@ async function main() {
       results.push({
         password,
         count,
+        originalLineNumber: entry.originalLineNumber,
         status: count === 0 ? `${greenCheck} Safe` : `${redX} PWNED (${count.toLocaleString()} times)`
       });
 
       // Progress indicator
-      const percent = ((i + 1) / passwords.length * 100).toFixed(1);
-      process.stdout.write(`\rProgress: ${i + 1}/${passwords.length} (${percent}%)`);
+      const percent = ((i + 1) / passwordEntries.length * 100).toFixed(1);
+      process.stdout.write(`\rProgress: ${i + 1}/${passwordEntries.length} (${percent}%)`);
     } catch (error) {
       const redX = `${COLOR_RED}✗${COLOR_RESET}`;
       results.push({
         password,
         count: -1,
+        originalLineNumber: entry.originalLineNumber,
         status: `${redX} Error: ${error.message}`
       });
     }
@@ -208,8 +229,8 @@ async function main() {
 
   console.log('\n\n--- Results ---\n');
   console.log('(Line numbers correspond to your input file)\n');
-  results.forEach((result, index) => {
-    console.log(`Line ${index + 1}: ${result.status}`);
+  results.forEach((result) => {
+    console.log(`Line ${result.originalLineNumber}: ${result.status}`);
     if (showPasswords && (result.count > 0 || result.count === -1)) {
       console.log(`   Password: ${result.password}`);
     }
@@ -220,7 +241,7 @@ async function main() {
   const pwnedPasswords = results.filter(r => r.count > 0).length;
   const errors = results.filter(r => r.count === -1).length;
 
-  console.log(`Total passwords checked: ${passwords.length}`);
+  console.log(`Total passwords checked: ${passwordEntries.length}`);
   console.log(`Safe passwords: ${safePasswords}`);
   console.log(`Pwned passwords: ${pwnedPasswords}`);
   if (errors > 0) {
@@ -228,7 +249,7 @@ async function main() {
   }
   console.log(`\nAPI calls made: ${checkedCount}`);
   console.log(`Results from cache: ${cachedCount}`);
-  console.log(`Cache efficiency: ${passwords.length > 0 ? ((cachedCount / passwords.length) * 100).toFixed(1) : 0}%`);
+  console.log(`Cache efficiency: ${passwordEntries.length > 0 ? ((cachedCount / passwordEntries.length) * 100).toFixed(1) : 0}%`);
 }
 
 main().catch(error => {
