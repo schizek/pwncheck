@@ -11,6 +11,8 @@ const HASH_PREFIX_LENGTH = 5;
 
 // ANSI color codes
 const COLOR_GREEN = '\x1b[32m';
+const COLOR_CYAN = '\x1b[36m';
+const COLOR_DIM = '\x1b[2m';
 const COLOR_RED = '\x1b[31m';
 const COLOR_RESET = '\x1b[0m';
 
@@ -163,6 +165,15 @@ function escapeCsv(value) {
   return str;
 }
 
+function renderProgressBar(current, total, found = 0, width = 30) {
+  const ratio = total > 0 ? Math.min(current / total, 1) : 0;
+  const filled = Math.round(ratio * width);
+  const empty = Math.max(width - filled, 0);
+  const bar = `${COLOR_GREEN}${'█'.repeat(filled)}${COLOR_DIM}${'░'.repeat(empty)}${COLOR_RESET}`;
+  const percent = (ratio * 100).toFixed(1);
+  return { bar, percent, found };
+}
+
 /**
  * Main function
  */
@@ -231,6 +242,7 @@ async function main() {
   const results = [];
   let checkedCount = 0;
   let cachedCount = 0;
+  let pwnedCount = 0;
 
   for (let i = 0; i < passwordEntries.length; i++) {
     const entry = passwordEntries[i];
@@ -263,8 +275,12 @@ async function main() {
       });
 
       // Progress indicator
-      const percent = ((i + 1) / passwordEntries.length * 100).toFixed(1);
-      process.stdout.write(`\rProgress: ${i + 1}/${passwordEntries.length} (${percent}%)`);
+      if (count > 0) {
+        pwnedCount++;
+      }
+
+      const { bar, percent, found } = renderProgressBar(i + 1, passwordEntries.length, pwnedCount);
+      process.stdout.write(`\r${COLOR_CYAN}Progress:${COLOR_RESET} [${bar}] ${percent}% (${i + 1}/${passwordEntries.length}) | ${COLOR_GREEN}Pwned:${COLOR_RESET} ${found}`);
     } catch (error) {
       const redX = `${COLOR_RED}✗${COLOR_RESET}`;
       results.push({
@@ -274,6 +290,10 @@ async function main() {
         status: `${redX} Error: ${error.message}`
       });
     }
+  }
+
+  if (passwordEntries.length > 0) {
+    process.stdout.write('\n');
   }
   console.log('\n\n--- Results ---\n');
   console.log('(Line numbers correspond to your input file)\n');
