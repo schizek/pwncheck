@@ -1,9 +1,12 @@
 {
-  "name": "pwned-password-checker",
+  "name": "pwncheck",
   "version": "1.0.0",
   "type": "module",
-  "description": "A Node.js script that checks passwords against the Have I Been Pwned API with intelligent caching to prevent duplicate API calls.",
-  "main": "check-pwned-passwords.js",
+  "description": "CLI tool that checks passwords against the Have I Been Pwned API with intelligent caching.",
+  "main": "pwncheck.js",
+  "bin": {
+    "pwncheck": "./pwncheck.js"
+  },
   "scripts": {
     "prepare": "husky install",
     "lint": "eslint . --max-warnings=0",
@@ -25,7 +28,9 @@
     "password",
     "security",
     "pwned",
-    "haveibeenpwned"
+    "haveibeenpwned",
+    "cli",
+    "nodejs"
   ],
   "author": "",
   "license": "ISC",
