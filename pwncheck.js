@@ -210,6 +210,16 @@ export async function main() {
   }
 
   const nonFlagArgs = args.filter((arg) => !arg.startsWith('--') && !arg.startsWith('-'));
+
+  // Validate that a file path was provided
+  if (nonFlagArgs.length === 0) {
+    console.error('\n❌ Error: No input file specified\n');
+    console.error('Usage: pwncheck <input-file> [options]\n');
+    console.error('Example: pwncheck passwords.txt --export-csv\n');
+    console.error('Run "pwncheck --help" for more information');
+    process.exit(1);
+  }
+
   const filePath = path.resolve(nonFlagArgs[0]);
 
   const hasFlag = (name) => args.includes(name);
