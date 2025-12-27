@@ -12,6 +12,4 @@ Ideas for future improvement.
 
 ## Security / DevOps
 
-- [ ] Add Dependabot or Renovate config for automated dependency updates
-- [ ] Pin exact dependency versions for reproducible builds
-- [ ] Add npm audit to CI pipeline (currently only runs on pre-push locally)
+- [x] Pin exact dependency versions for reproducible builds
