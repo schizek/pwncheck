@@ -8,7 +8,6 @@
     "pwncheck": "./pwncheck.js"
   },
   "scripts": {
-    "prepare": "husky install",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",

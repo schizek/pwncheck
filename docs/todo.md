@@ -9,7 +9,3 @@ Ideas for future improvement.
 - [ ] Add `--skip-header` flag for CSV files with header rows
 - [ ] Add `--column` flag to specify which column contains passwords
 - [ ] Add `--quiet` mode for scripting/piping
-
-## Security / DevOps
-
-- [x] Pin exact dependency versions for reproducible builds
